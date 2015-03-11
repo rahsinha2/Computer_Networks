@@ -1,0 +1,223 @@
+Project 2: BitTorrent Client Implementation (CSCIP-538)
+=========================================================
+	Name			User name
+	---- 			--------
+1)	Rahul Sinha		rahsinha
+2)	Rohit Ingle		rpingle
+
+Code Description
+===========================================================================
+We have used C for implementing this project.
+The file hierarchy has been kept the same as provided in the skeleton code.
+
+For this project, we have implemented a '1 Leecher and 1 Seeder' model.
+A single seeder transfers the file to a single leecher.
+
+In our project tarball, you will find the following files:
+1. README
+2. Makefile
+3. bt_lib.c|h
+4. bt_setup.c|h
+5. bt_client
+6. mylog.log
+7. Sample torrent files and their corresponding data files:
+	a. moby_dick.txt.torrent 
+	b. moby_dick.txt
+	c. download.mp3.torrent
+	d. download.mp3
+	e. Stranger+in+a+Strange+Land+by+Robert+Heinlein+%28.txt+file%29.torrent
+	f. sample_large_file.txt
+
+Functions
+==========
+
+1) main() 	 	:  This is the main function.
+				
+2) shuffle_piece_index() : This function is used to shuffle the pieces in the 
+				piece range so that they can be requested in a random order in the 
+				'request' messages.
+				
+3) get_bitfield() : This function is used to generate the logic of creating bitfield
+				messages. We are sending a 1 for each piece the Seeder has a given piece
+				and 0 if a piece is not available. The bitfield messages are sent in the '1/0' 
+				format in multiples of 8. (example: a file containing 6 pieces would have the 
+				bitfield as: '11111100')
+				
+4) create_bitfield_message() : This function creates a bitfield message which is sent
+				by the Seeder to the Leecher after completion of the Handshake. It uses the 
+				Bitfield returned by the get_bitfield() function and then creates a message
+				to be sent to the Leecher.
+				The following fields are used in the message:
+				a. length - length of the remaining fields.
+				b. id - ID of the bitfield message
+				c. Bitfield - the actual bitfield message, sent in byte multiples.
+
+5) receive_bitfield_message() : This function is used to receive the bitfield message 
+				at the Leecher side and find out how many pieces of a given torrent the
+				Seeder has with it.
+				For our project, we are assuming that that a particular Seeder has all 
+				the pieces for a given torrent file and no pieces are missing.
+
+6) create_message() : This function is used to create the 'interested' and 'unchoke'
+				messages. These messages are constructed using the length and id 
+				fields only.				
+
+7) receive_message() : This function is used to check the 'interested' and 
+				'unchoke' messages that are exchanged between the Leecher and 
+				Seeder after the initial Handshake. It checks whether the received
+				message was an 'interested' message or an 'unchoke' message.
+				
+8) create_request_message(): This function creates a 'request' message that the
+				Leecher would send to the Seeder to get the file.
+				We have created the 'request' message with the following
+				fields:
+				a. length - The total length of the remaining fields in message.
+				b. id - The id for the piece message. 
+				c. index - The piece number being sent.
+				d. begin - Byte offset within the piece.
+				e. blocksize - Size of the block 	
+				
+** For our code, we are using a Block Size of 256 bytes				
+
+9) receive_request_message() : This function extracts the information contained 
+				in the 'request' message sent by the Leecher for requesting the 
+				file. We are storing the requested piece number, offset and block
+				size in a structure.
+
+10) create_piece_message() : This function creates a 'piece' message that the
+				Seeder would send as a response to the Leecher's 'request'
+				message. We have created the 'piece' message with the following
+				fields:
+				a. length - The total length of the remaining fields in message.
+				b. id - The id for the piece message. 
+				c. index - The piece number being sent.
+				d. begin - Byte offset within the piece.
+				e. data - Sending the file data block by block
+
+11) extract_block_from_message() : This function is called by the Leecher 
+				instance of our project. This function is used to extract
+				the payload information from incoming 'piece' message sent by the
+				Seeder. We are parsing out the piece index, block offset 
+				and the data sent by the Seeder.
+				
+12) create_have_message() : This function is used for sending a 'have' message. Once
+				a complete piece has been downloaded by the Leecher, the Leecher then
+				verifies the SHA1 hash of the downloaded piece and sends a 'have' message.
+				It contains the length, id and piece_number fields.
+				
+				
+Tasks Accomplished
+====================================================================================
+SEEDER
+============
+1) Parsing the .torrent files and storing the following fields:
+   a. length (length of the file to torrent)
+   b. name (actual file name)
+   c. piece length (size of each piece) 
+   d. pieces (20 bytes of SHA1 per piece)
+2) Connection Establishment and Handshake Protocol:
+		Verifying the handshake message initiated by the Leecher for the 
+		following fields:
+		a. 19 - Verify that the message received starts with '19'
+		b. BitTorrent Protocol - Above field is followed by 'BitTorrent Protocol'
+		c. Calculate the SHA1 hash of 'info' tag in the metainfo file and verify it 
+		   with the SHA1 hash sent by the Leecher in the Handshake message.
+		d. Verify the peer id of the leecher with the IP address and Port information
+		   extracted from the socket.
+		If verification of any of the above fields fail, the seeder drops the connection.
+		If verification success, send a Handshake response. The response message has the 
+		first three fields same as client handshake, plus the peer id of the Seeder this time.
+3) Sending a 'Bitfield' message to the peer after successfully completing the
+   the Handshake. This message includes the pieces that the server has for a 
+   particular torrent file.
+4) Once the Leecher sends an 'interested' message to the Seeder, the Seeder can
+   reply with an 'Unchoke' message, which would then allow the Leecher to request
+   pieces from the Seeder.
+5) The Seeder sends 'piece' messages to the Leecher in response to the request 
+   messages. The piece message contains a data field through which the actual 
+   file contents are transferred. 
+6) Seeder has a verbose mode that prints out additional information about the 
+   ongoing transfer on the screen. 
+7) Seeder is able to handle client crashes using SIGNALS.
+8) Once the transfer has been completed successfully, the Seeder waits in an 
+   infinite loop for other connections.
+ 
+LEECHER
+==============
+1) Parsing the .torrent files and storing the following fields:
+   a. length (length of the file to torrent)
+   b. name (actual file name)
+   c. piece length (size of each piece) 
+   d. pieces (20 bytes of SHA1 per piece)
+2) Connection Establishment and Handshake Protocol:
+		Creating a handshake message with the following fields: 
+		a. 19 - First field of the message
+		b. BitTorrent Protocol - Above field is followed by 'BitTorrent Protocol'
+		c. Calculate the SHA1 hash of 'info' tag in the metainfo file and append it
+		   to the Handshake message to be sent.
+		d. Verify the peer id of the leecher with the IP address and Port information
+		   extracted from the socket.
+3) Verify the Handshake response sent by the server.
+		a. 19 - Verify that the message received starts with '19'
+		b. BitTorrent Protocol - Above field is followed by 'BitTorrent Protocol'
+		c. Calculate the SHA1 hash of 'info' tag in the metainfo file and verify it 
+		   with the SHA1 hash sent by the Seeder in the Handshake message.
+		d. Verify the peer id of the seeder with the IP address and Port information
+		   extracted from the socket.
+		If verification of any of the above fields fail, the leecher drops the connection.
+4) Sending an 'interested' message to the peer after successfully completing the
+   the Handshake and receiving the 'Bitfield' message.
+5) Once the seeder sends an 'unchoke' message to the Leecher the leecher can start
+   sending 'request' messages to request file pieces in blocks. We have used a block 
+   size of 256 bytes in our project. 
+   The pieces of a file can be randomly requested in any order. However, all the 
+   blocks in each piece would be requested sequentially using the offset field of 
+   request message.
+6) After receiving a complete piece, the Leecher calculates the SHA1 hash of the 
+   received data and verifies it with the SHA1 hash mentioned in the torrent file. 
+   After successful verification of piece, it sends a 'Have' message to the Seeder.
+7) Leecher also has a verbose mode which will print additional information on the screen. 
+8) Once the transfer has been completed successfully, the Leecher exits from the connection
+   and the Leecher's socket is closed.
+
+
+Code Compilation and Execution
+======================================================================================
+Please copy all the files in the tarball to a directory on the linux machine.
+
+Execute the Makefile: Type 'make' and hit enter.
+
+The Makefile has been written to compile all the C files and Header files given
+in the folder and give an output executable named :  bt_client
+
+We have tested the code on silo.soic.indiana.edu and it works fine.
+
+To run the executable type ./bt_client [OPTIONS] file.torrent 
+along with the necessary options as listed:
+
+./bt_client [OPTIONS]  file.torrent 
+          -h            Print this help screen
+          -b ip:port    Binds to this ip+port for incoming connections
+          -s save_file  Save the torrent in directory save_dir (dflt: .)
+          -l log_file	Save logs to log file (dflt: bt-client.log)
+		  -p ip:port    Connect to this peer 
+          -v			Verbose mode to print additional verbose info
+		  -I			Set the node identifier to id, a hex string
+						(dflt: computed based on ip and port)
+
+** We have not implemented the '-I id' usage mentioned in the write-up.
+   Since it was mentioned that it will not be a factor in grading,
+   we are calculating the ID using a combination of IP and port.
+		  
+Interpreting the Output
+========================================================================================
+1) Once all the pieces have been received, verify the downloaded file size with the original 
+file. 
+Also, verify that the contents received inside the file are the same as original file.
+2) User can use the verbose mode for printing out additional information on the screen.
+3) The log file keeps track of all the events taking place during the execution of the program. 
+4) Apart from the log file and verbose mode, we also have our standard output displaying 
+minimal information to the user on the screen.
+==========================================================================================
+					EOF
+==========================================================================================

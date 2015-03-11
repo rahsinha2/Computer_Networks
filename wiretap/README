@@ -1,0 +1,108 @@
+Project 3: Wiretap (CSCIP-538)
+=========================================================
+	Name			User name
+	---- 			--------
+1)	Rahul Sinha		rahsinha
+2)	Rohit Ingle		rpingle
+
+Code Description
+===========================================================================
+We have implemented this project in C language. In this project, we are writing analysis
+routines for the packets captured.
+
+In our project tarball (project3.tar), you will find the following files:
+1. README
+2. Makefile
+3. wiretap.c
+4. Supporting files:
+	a. wiretap.h
+	b. wiretap_functions.c	
+	
+	wiretap.c - Contains only the main function. 
+	wiretap.h - Contains the header files, definitions and structures required for this
+				project.
+	wiretap_functions.c - Contains the all the required helper functions for this project.
+5. Sample capture.txt files from traceroute and wget
+	
+Functions
+==========
+
+1) main() 	 		   : This is the main function.
+ 
+2) read_packet() 	   : This function has been used to calculate packet parameters such as 
+						 total packets captured, minimum/maximum/average size of packets, 
+						 time-stamp and duration.
+
+3) extract_packet()	   : This function contains the logic for parsing out the details for
+						 each packet and analysing it.
+
+4) print_help() 	   : To print out the help section.
+
+5) parse_args()     	   : To parse the command line arguments.
+
+6) print_count() ; print_count_int();
+print_tcp_flags(); print_tcp_options();
+print ttl()
+				   : Print functions for printing out the data on the screen
+
+				
+Tasks Accomplished
+====================================================================================
+1) Successfully opened and analysed the pcap dump file provided.
+2) No Magic numbers used.
+3) Only Ethernet captures have been analysed.
+4) For each packet, we have extracted the required details from each layer and displayed
+   on the output screen.
+5) We are displaying the packet statistics on the output screen in the form of following
+   sections: Summary, Link Layer, Network Layer, Transport Layer
+
+Code Compilation and Execution
+======================================================================================
+Please copy all the files in the tarball to a directory on the linux machine.
+
+Execute the Makefile: Type 'make' and hit enter.
+
+The Makefile has been written to compile all the C files and Header files given
+in the folder and give an output executable named :  wiretap
+
+We have tested the code on silo.soic.indiana.edu and it works fine.
+
+Options that can be passed in the command line are as follows: 
+ 
+    --help        		When Wiretap is invoked with this option, it shows a short program
+						description as well as displays other options available to the users.
+	Execution: ./wiretap --help
+			
+    --open [file]   	Opens the file specified. If it is a valid tcp dump file, the program
+						will parse it and display the output on the screen.
+	Execution: ./wiretap --open file.pcap	
+	
+	
+Interpreting the Output
+========================================================================================
+Our output file has been divided into various sub-sections as follows:
+
+1. Summary
+	- Start date and time, total duration and total number of packets in the packet capture.
+	- Average, minimum and maximum packet sizes.
+	
+2. Link Layer
+	- Unique Ethernet addresses at source and destination as well the number of times each	
+	  address is encountered.
+
+3. Network Layer
+    - Network Layer protocols seen; number of packets per protocol
+	- Source and Destination IP addresses with the packet count.
+	- ARP participants and their MAC and IP address, and the packet count.
+** For this project we are analysing only IPv4 packets, and ignoring the IPv6 ones.
+However, we are counting the Ethernet addresses of IPv6 packets also.
+	
+4. Transport Layer
+	- Unique transport layer protocols seen
+	- TCP an UDP ports at source and destination
+	- For TCP: number of packets containing specific flags, and packets containing options
+	- For ICMP: number of packets containing unique ICMP types and codes.
+	
+==========================================================================================
+					EOF
+==========================================================================================
